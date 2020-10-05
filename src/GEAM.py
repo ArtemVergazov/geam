@@ -317,91 +317,92 @@ solver_stage2 = {'scheme': erk4, 'p': 4}
 errors = plt.figure()
 for lambda_ in Lambdas:
     u0 = np.array([0, 1 / lambda_ * np.arcsinh((lambda_ - (lambda_ ** 2 - 4) ** 0.5) / 2)])
-    T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
-    print(T_pole)
-    U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas, R_mas, kappas = stage1(lambda_, solver_stage1,
-                                                                                       break_crit)
-    switch = len(N_mas) - 1
-    print('Переход с первого этапа на второй происходит на', switch + 1, 'сетке')
+    
+#     T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
+#     print(T_pole)
+#     U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas, R_mas, kappas = stage1(lambda_, solver_stage1,
+#                                                                                        break_crit)
+#     switch = len(N_mas) - 1
+#     print('Переход с первого этапа на второй происходит на', switch + 1, 'сетке')
 
-    U, DL_mas, N_mas, R_mas = stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver_stage2, H)
-    L_array.append(L_mas[-1])
-    L_extr = 1 / lambda_ * np.log(1 / np.sinh(lambda_ * u0[1]))
-    data[lambda_] = {
-        'u0': u0,
-        'L_extr': L_extr,
-        'Solutions': U,
-        'L error': np.log10(DL_mas),
-        'T error': np.log10(DT_mas),
-        'Grids': np.log10(N_mas),
-        'L array': L_mas,
-        'switch': switch,
-        'crit2': np.log10(crit_mas),
-        'Richardson': np.log10(R_mas),
-        'Kappa': kappas}
+#     U, DL_mas, N_mas, R_mas = stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver_stage2, H)
+#     L_array.append(L_mas[-1])
+#     L_extr = 1 / lambda_ * np.log(1 / np.sinh(lambda_ * u0[1]))
+#     data[lambda_] = {
+#         'u0': u0,
+#         'L_extr': L_extr,
+#         'Solutions': U,
+#         'L error': np.log10(DL_mas),
+#         'T error': np.log10(DT_mas),
+#         'Grids': np.log10(N_mas),
+#         'L array': L_mas,
+#         'switch': switch,
+#         'crit2': np.log10(crit_mas),
+#         'Richardson': np.log10(R_mas),
+#         'Kappa': kappas}
 
-    line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
-    line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
-    fig = plt.figure()
+#     line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
+#     line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
+#     fig = plt.figure()
 
-    # # crit
-    # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
+#     # # crit
+#     # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
 
-    line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
-    line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
+#     line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
+#     line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
 
-    err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
-    # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
-    # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
+#     err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
+#     # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
+#     # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
 
-    rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
+#     rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
 
-    plt.title('Lambda = ' + str(lambda_))
-    plt.xlabel('lg(N)')
-    plt.ylabel('lg(err)')
-    plt.legend(handles=[line1, line_p, err, rich])
-    plt.show()
-    fig.savefig('err' + str(lambda_) + '.png')
+#     plt.title('Lambda = ' + str(lambda_))
+#     plt.xlabel('lg(N)')
+#     plt.ylabel('lg(err)')
+#     plt.legend(handles=[line1, line_p, err, rich])
+#     plt.show()
+#     fig.savefig('err' + str(lambda_) + '.png')
 
-    X = [U[-1][i][0] for i in range(len(U[-1]))]
-    Y = [U[-1][i][1] for i in range(len(U[-1]))]
-    fig1 = plt.figure()
-    plt.plot(X, Y)
-    plt.title('Lambda = ' + str(lambda_))
-    plt.xlabel('t')
-    plt.ylabel('u(t)')
-    plt.show()
-    fig1.savefig('graph' + str(lambda_) + '.png')
+#     X = [U[-1][i][0] for i in range(len(U[-1]))]
+#     Y = [U[-1][i][1] for i in range(len(U[-1]))]
+#     fig1 = plt.figure()
+#     plt.plot(X, Y)
+#     plt.title('Lambda = ' + str(lambda_))
+#     plt.xlabel('t')
+#     plt.ylabel('u(t)')
+#     plt.show()
+#     fig1.savefig('graph' + str(lambda_) + '.png')
 
-plt.figure()
+# plt.figure()
 
-line10, = plt.plot(data[10]['Grids'], data[10]['L error'], '-ob', linewidth=5, markersize=10, label='lambda = 10')
-switch = data[10]['switch']
-yswitch = data[10]['L error'][switch]
-plt.vlines(data[10]['Grids'][switch], yswitch - .7, yswitch + .7, colors='b')
+# line10, = plt.plot(data[10]['Grids'], data[10]['L error'], '-ob', linewidth=5, markersize=10, label='lambda = 10')
+# switch = data[10]['switch']
+# yswitch = data[10]['L error'][switch]
+# plt.vlines(data[10]['Grids'][switch], yswitch - .7, yswitch + .7, colors='b')
 
-line100, = plt.plot(data[100]['Grids'], data[100]['L error'], '-og', linewidth=5, markersize=10, label='lambda = 100')
-switch = data[100]['switch']
-yswitch = data[100]['L error'][switch]
-plt.vlines(data[100]['Grids'][switch], yswitch - .7, yswitch + .7, colors='g')
+# line100, = plt.plot(data[100]['Grids'], data[100]['L error'], '-og', linewidth=5, markersize=10, label='lambda = 100')
+# switch = data[100]['switch']
+# yswitch = data[100]['L error'][switch]
+# plt.vlines(data[100]['Grids'][switch], yswitch - .7, yswitch + .7, colors='g')
 
-line1000, = plt.plot(data[1000]['Grids'], data[1000]['L error'], '-or', linewidth=5, markersize=10, label='lambda = 1000')
-switch = data[1000]['switch']
-yswitch = data[1000]['L error'][switch]
-plt.vlines(data[1000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='r')
+# line1000, = plt.plot(data[1000]['Grids'], data[1000]['L error'], '-or', linewidth=5, markersize=10, label='lambda = 1000')
+# switch = data[1000]['switch']
+# yswitch = data[1000]['L error'][switch]
+# plt.vlines(data[1000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='r')
 
-line10000, = plt.plot(data[10000]['Grids'], data[10000]['L error'], '-om', linewidth=5, markersize=10, label='lambda = 10000')
-switch = data[10000]['switch']
-yswitch = data[10000]['L error'][switch]
-plt.vlines(data[10000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='m')
+# line10000, = plt.plot(data[10000]['Grids'], data[10000]['L error'], '-om', linewidth=5, markersize=10, label='lambda = 10000')
+# switch = data[10000]['switch']
+# yswitch = data[10000]['L error'][switch]
+# plt.vlines(data[10000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='m')
 
-line100000, = plt.plot(data[100000]['Grids'], data[100000]['L error'], '-oc', linewidth=5, markersize=10, label='lambda = 100000')
-switch = data[100000]['switch']
-yswitch = data[100000]['L error'][switch]
-plt.vlines(data[100000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='c')
+# line100000, = plt.plot(data[100000]['Grids'], data[100000]['L error'], '-oc', linewidth=5, markersize=10, label='lambda = 100000')
+# switch = data[100000]['switch']
+# yswitch = data[100000]['L error'][switch]
+# plt.vlines(data[100000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='c')
 
-plt.legend(handles=[line10, line100, line1000, line10000, line100000])
-plt.xlabel('lg(N)')
-plt.ylabel('lg(error)')
-plt.title('Calculations with ERK2 -> ERK4')
-plt.savefig('D:/Docs/MSU/NumericalMethods/Programs/GEAM/20092020/ERK1.png')
+# plt.legend(handles=[line10, line100, line1000, line10000, line100000])
+# plt.xlabel('lg(N)')
+# plt.ylabel('lg(error)')
+# plt.title('Calculations with ERK2 -> ERK4')
+# plt.savefig('D:/Docs/MSU/NumericalMethods/Programs/GEAM/20092020/ERK1.png')
