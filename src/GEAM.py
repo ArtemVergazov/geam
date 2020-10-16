@@ -89,8 +89,8 @@ def norm(vector):
 
 # правая часть после перехода к длине дуги
 def F(u):
-    f_n = f(u)
-    return f_n / norm(f_n)
+    # f_n = f(u)
+    return np.array([1 / np.cosh(lambda_ * u[1]), np.tanh(lambda_ * u[1])])
 
 
 # точное решение
@@ -131,6 +131,7 @@ def run_iterations(L, L_mas, L_mas_old, H, U, integral, old_integral, Nmin, Nmax
 
         try:
             h = (Nmin / L_mas_old[-1] + Nmax * kappa ** (2 / 5) * old_integral ** (-1)) ** (-1)
+            # print('h =', h)
         except ZeroDivisionError as e:
             print(e)
             return L, L_mas, H, U, integral, DL, kappas
@@ -173,12 +174,13 @@ def run_iterations(L, L_mas, L_mas_old, H, U, integral, old_integral, Nmin, Nmax
 
         F_n1 = F(u_new)
         kappa = norm((F_n1 - F_n) / h)
+        # print('kappa =', kappa)
         kappas.append(kappa)
 
         #        w3 = F(u)
         #        kappa = norm((2*w2 - 2*w3) / h)
 
-        integral += kappa ** (2 / 5) * h
+        integral += kappa**(2 / 5) * h
         u = u_new
 
         if u_new[1] >= 1 / lambda_ * np.arcsinh((lambda_ + (lambda_ ** 2 - 4) ** 0.5) / 2):
@@ -187,6 +189,7 @@ def run_iterations(L, L_mas, L_mas_old, H, U, integral, old_integral, Nmin, Nmax
     DL /= sum(H)
     DL **= 0.5
 
+    print('L =', L, 'int =', integral)
     return L, L_mas, H, U, integral, DL, kappas
 
 
@@ -244,6 +247,7 @@ def stage1(lambda_, solver, break_crit):
             crit_mas[-1] /= L
             crit_mas[-1] **= 0.5
 
+        print('N =', len(H))
         N_mas.append(len(H))
 
         integral_mas.append(integral)
@@ -261,13 +265,22 @@ def stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver, H):
     while np.log10(N_mas[-1]) < 4:
 
         H_new = [0 for i in range(2 * len(H))]
-        for i in range(1, len(H) - 1):
-            H_new[2 * i] = H[i] * H[i - 1] ** 0.25 / (H[i - 1] ** 0.25 + H[i + 1] ** 0.25)
-            H_new[2 * i + 1] = H[i] * H[i + 1] ** 0.25 / (H[i - 1] ** 0.25 + H[i + 1] ** 0.25)
-        H_new[0] = H[0] * H[0] ** 0.5 / (H[0] ** 0.5 + H[1] ** 0.5)
-        H_new[1] = H[0] * H[1] ** 0.5 / (H[0] ** 0.5 + H[1] ** 0.5)
-        H_new[-2] = H[-1] * H[-2] ** 0.5 / (H[-2] ** 0.5 + H[-1] ** 0.5)
-        H_new[-1] = H[-1] * H[-1] ** 0.5 / (H[-2] ** 0.5 + H[-1] ** 0.5)
+        
+        N = len(H)
+        
+        if N == 1:
+            H_new[0] = H[0] / 2
+            H_new[1] = H[0] / 2
+        else:
+            H_new[0] = H[0] * H[0] ** 0.5 / (H[0] ** 0.5 + H[1] ** 0.5)
+            H_new[1] = H[0] * H[1] ** 0.5 / (H[0] ** 0.5 + H[1] ** 0.5)
+            H_new[-2] = H[-1] * H[-2] ** 0.5 / (H[-2] ** 0.5 + H[-1] ** 0.5)
+            H_new[-1] = H[-1] * H[-1] ** 0.5 / (H[-2] ** 0.5 + H[-1] ** 0.5)
+        
+            if N > 2:        
+                for i in range(1, N - 1):
+                    H_new[2 * i] = H[i] * H[i - 1] ** 0.25 / (H[i - 1] ** 0.25 + H[i + 1] ** 0.25)
+                    H_new[2 * i + 1] = H[i] * H[i + 1] ** 0.25 / (H[i - 1] ** 0.25 + H[i + 1] ** 0.25)
 
         H = H_new
 
@@ -296,7 +309,7 @@ def richardson(U, H, p):
     return R
 
 
-Lambdas = [10, 100, 1000, 10000, 1e5]
+Lambdas = [1e5]
 break_crit = 1e-1
 
 # lambda_ = Lambdas[-1]
@@ -311,68 +324,68 @@ L_array = []
 
 data = {}
 
-solver_stage1 = {'scheme': erk2, 'p': 2}
+solver_stage1 = {'scheme': erk4, 'p': 4}
 solver_stage2 = {'scheme': erk4, 'p': 4}
 
 errors = plt.figure()
 for lambda_ in Lambdas:
     u0 = np.array([0, 1 / lambda_ * np.arcsinh((lambda_ - (lambda_ ** 2 - 4) ** 0.5) / 2)])
     
-#     T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
-#     print(T_pole)
-#     U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas, R_mas, kappas = stage1(lambda_, solver_stage1,
-#                                                                                        break_crit)
-#     switch = len(N_mas) - 1
-#     print('Переход с первого этапа на второй происходит на', switch + 1, 'сетке')
+    T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
+    print(T_pole)
+    U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas, R_mas, kappas = stage1(lambda_, solver_stage1,
+                                                                                        break_crit)
+    switch = len(N_mas) - 1
+    print('Переход с первого этапа на второй происходит на', switch + 1, 'сетке')
 
-#     U, DL_mas, N_mas, R_mas = stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver_stage2, H)
-#     L_array.append(L_mas[-1])
-#     L_extr = 1 / lambda_ * np.log(1 / np.sinh(lambda_ * u0[1]))
-#     data[lambda_] = {
-#         'u0': u0,
-#         'L_extr': L_extr,
-#         'Solutions': U,
-#         'L error': np.log10(DL_mas),
-#         'T error': np.log10(DT_mas),
-#         'Grids': np.log10(N_mas),
-#         'L array': L_mas,
-#         'switch': switch,
-#         'crit2': np.log10(crit_mas),
-#         'Richardson': np.log10(R_mas),
-#         'Kappa': kappas}
+    U, DL_mas, N_mas, R_mas = stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver_stage2, H)
+    L_array.append(L_mas[-1])
+    L_extr = 1 / lambda_ * np.log(1 / np.sinh(lambda_ * u0[1]))
+    data[lambda_] = {
+        'u0': u0,
+        'L_extr': L_extr,
+        'Solutions': U,
+        'L error': np.log10(DL_mas),
+        'T error': np.log10(DT_mas),
+        'Grids': np.log10(N_mas),
+        'L array': L_mas,
+        'switch': switch,
+        'crit2': np.log10(crit_mas),
+        'Richardson': np.log10(R_mas),
+        'Kappa': kappas}
 
-#     line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
-#     line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
-#     fig = plt.figure()
+    line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
+    line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
+    fig = plt.figure()
 
-#     # # crit
-#     # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
+    # # crit
+    # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
 
-#     line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
-#     line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
+    line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
+    line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
 
-#     err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
-#     # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
-#     # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
+    err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
+    # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
+    # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
 
-#     rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
+    rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
 
-#     plt.title('Lambda = ' + str(lambda_))
-#     plt.xlabel('lg(N)')
-#     plt.ylabel('lg(err)')
-#     plt.legend(handles=[line1, line_p, err, rich])
-#     plt.show()
-#     fig.savefig('err' + str(lambda_) + '.png')
+    plt.title('Lambda = ' + str(lambda_))
+    plt.xlabel('lg(N)')
+    plt.ylabel('lg(err)')
+    plt.legend(handles=[line1, line_p, err, rich])
+    plt.show()
+    fig.savefig('err' + str(lambda_) + '.png')
 
-#     X = [U[-1][i][0] for i in range(len(U[-1]))]
-#     Y = [U[-1][i][1] for i in range(len(U[-1]))]
-#     fig1 = plt.figure()
-#     plt.plot(X, Y)
-#     plt.title('Lambda = ' + str(lambda_))
-#     plt.xlabel('t')
-#     plt.ylabel('u(t)')
-#     plt.show()
-#     fig1.savefig('graph' + str(lambda_) + '.png')
+    X = [U[-1][i][0] for i in range(len(U[-1]))]
+    Y = [U[-1][i][1] for i in range(len(U[-1]))]
+    fig1 = plt.figure()
+    plt.plot(X, Y)
+    plt.title('Lambda = ' + str(lambda_))
+    plt.xlabel('t')
+    plt.ylabel('u(t)')
+    plt.show()
+    fig1.savefig('graph' + str(lambda_) + '.png')
 
 # plt.figure()
 
