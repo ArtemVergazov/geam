@@ -5,75 +5,64 @@ Created on Fri Nov  8 16:32:52 2019
 @author: Artem
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
+import warnings
 
 
-def erk1(u, h, F_n):
-    return u + h*F_n
+def erk1(u, h, F_n, lambda_):
+    return u + h * F_n
 
 
-def erk2(u, h, F_n):
+def erk2(u, h, F_n, lambda_):
     a2 = 2 / 3
     b1, b2 = 1 / 4, 3 / 4
     w1 = F_n
-    w2 = F(u + h * a2 * w1)
+    w2 = F(u + h * a2 * w1, lambda_)
     return u + h * (b1 * w1 + b2 * w2)
 
 
-def erk3(u, h, F_n):
+def erk3(u, h, F_n, lambda_):
     b1, b2, b3 = 2 / 9, 3 / 9, 4 / 9
     a21, a32 = 1 / 2, 3 / 4
     w1 = F_n
-    w2 = F(u + h * a21 * w1)
-    w3 = F(u + h * a32 * w2)
+    w2 = F(u + h * a21 * w1, lambda_)
+    w3 = F(u + h * a32 * w2, lambda_)
     return u + h * (b1 * w1 + b2 * w2 + b3 * w3)
 
 
-def erk4(u, h, F_n):
+def erk4(u, h, F_n, lambda_):
     b1, b2, b3, b4 = 1 / 6, 1 / 3, 1 / 3, 1 / 6
     a21, a32, a43 = 1 / 2, 1 / 2, 1
     w1 = F_n
-    w2 = F(u + h * a21 * w1)
-    w3 = F(u + h * a32 * w2)
-    w4 = F(u + h * a43 * w3)
+    w2 = F(u + h * a21 * w1, lambda_)
+    w3 = F(u + h * a32 * w2, lambda_)
+    w4 = F(u + h * a43 * w3, lambda_)
     return u + h * (b1 * w1 + b2 * w2 + b3 * w3 + b4 * w4)
 
 
-def write_to_file(data):
-    print('write to file')
-    filename = str(lambda_) + '.txt'
-    with open(filename, "w") as file:
-        print('{0} {1} {2} {3}'.format('N'.rjust(10), 'err'.rjust(10), 'crit'.rjust(10), 'rich'.rjust(10)), file=file)
-        print('{0:10.4f} {1:10.4f}'.format(data['Grids'][0], data['L error'][0]), file=file)
-        for i in range(len(data['Richardson'])):
-            print('{0:10.4f} {1:10.4f} {2:10.4f} {3:10.4f}'.format(
-                data['Grids'][i + 1], data['L error'][i + 1],
-                data['crit2'][i], data['Richardson'][i]), file=file)
+def erk(u, h, F_n, lambda_, p):
+    if p == 1:
+        return erk1(u, h, F_n, lambda_)
+    elif p == 2:
+        return erk2(u, h, F_n, lambda_)
+    elif p == 3:
+        return erk3(u, h, F_n, lambda_)
+    elif p == 4:
+        return erk4(u, h, F_n, lambda_)
+    else:
+        raise ValueError('Invalid order of approximation p = {}!'.format(p))
 
 
-# u - вектор-функция, u[0] - функция-время после автономизации,
-# u[1:] - искомая вектор-функция
-a = 0.0  # левый конец отрезка по времени
-# Nmax - число шагов по всему отрезку,
-# Nmin - число шагов на регулярных участках,
-# kappa - кривизна на предыдущем шаге,
-# считаем шаг h с учетом кривизны решения
-# берем длину дуги, кривизну на первом шаге и интеграл с потолка
-Lmax = 1
-Nmin = 5
-Nmax = 10
-
-
-# правая часть ОДУ
-def f(u):
-    # return np.array([1., u[1] * (u[0] - u[1]) / 0.5])
-    # return np.array([1., np.tan(lambda_*u[1])])
-    # return np.array([
-    #        1., -lambda_ * np.cos(u[0]) * (u[1]**2 - a**2)**2 / (u[1]**2 + a**2)
-    #        ])
-    # return np.array([1., 2*u[0]])
-    return np.array([1., np.sinh(lambda_ * u[1])])
+# def write_to_file(case):
+#     print('write to file')
+#     filename = str(lambda_) + '.txt'
+#     with open(filename, "w") as file:
+#         print('{0} {1} {2} {3}'.format('N'.rjust(10), 'err'.rjust(10), 'crit'.rjust(10), 'rich'.rjust(10)), file=file)
+#         print('{0:10.4f} {1:10.4f}'.format(data['Grids'][0], data['L error'][0]), file=file)
+#         for i in range(len(data['Richardson'])):
+#             print('{0:10.4f} {1:10.4f} {2:10.4f} {3:10.4f}'.format(
+#                 data['Grids'][i + 1], data['L error'][i + 1],
+#                 data['crit2'][i], data['Richardson'][i]), file=file)
 
 
 def scalar(x, y):
@@ -82,340 +71,283 @@ def scalar(x, y):
     return (x * y).sum()
 
 
-def norm(vector):
-    # vector - np.ndarray
-    return (scalar(vector, vector)) ** 0.5
+def norm(vec: np.ndarray):
+    # vec - np.ndarray
+    return (scalar(vec, vec))**0.5
+
+
+# правая часть ОДУ
+def f(u, lambda_):
+    # return np.array([1., np.tan(lambda_ * u[1])])
+    return np.array([1., np.sinh(lambda_ * u[1])])
 
 
 # правая часть после перехода к длине дуги
-def F(u):
+def F(u, lambda_):
     # f_n = f(u)
-    return np.array([1 / np.cosh(lambda_ * u[1]), np.tanh(lambda_ * u[1])])
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            res = np.array([1 / np.cosh(lambda_ * u[1]),
+                            np.tanh(lambda_ * u[1])])
+        except Warning:
+            res = np.array([0., np.inf])
+    return res
 
 
-# точное решение
-def UL(L):
-    # return (1/lambda_) * 2 * np.atan(np.exp(lambda_*L) * np.tan(lambda_*u0[1]/2))
+def UL(L, lambda_, u0):
+    '''
+    Exact solution u(l). Must support vectorizing.
+
+    Parameters
+    ----------
+    L : float or np.array
+        Value or vector of values of arc length.
+
+    Returns
+    -------
+    float or np.array
+        Value or vector of values of solution at L.
+    '''
     A = np.exp(lambda_ * L) * np.sinh(lambda_ * u0[1])
-    return 1 / lambda_ * (np.log(A) + np.log(1 + np.sqrt(1 + A ** (-2))))
+    return 1 / lambda_ * (np.log(A) + np.log(1 + np.sqrt(1 + A**(-2))))
 
 
-def UT(t):
-    return (1 / lambda_) * np.arcsin(np.exp(lambda_ * t) * np.sin(lambda_ * u0[1]))
-#    B = np.exp(lambda_*t) * np.tanh(lambda_ * u0[1] / 2)
-#    return 1/lambda_ * np.log((1 + B) / (1 - B))
+def UT(T, lambda_, u0):
+    '''
+    Exact solution u(t). Must support vectorizing.
+
+    Parameters
+    ----------
+    T : float or np.array
+        Value or vector of values of t.
+
+    Returns
+    -------
+    float or np.array
+        Value or vector of values of solution at t.
+    '''
+    # return (1 / lambda_) * np.arcsin(np.exp(lambda_ * t) * \
+    #    np.sin(lambda_ * u0[1]))
+    B = np.exp(lambda_ * T) * np.tanh(lambda_ * u0[1] / 2)
+    return 1 / lambda_ * np.log((1 + B) / (1 - B))
 
 
-def TL(L):
+def TL(L, lambda_, u0):
+    '''
+    Exact solution t(l). Must support vectorizing.
+
+    Parameters
+    ----------
+    L : float or np.array
+        Value or vector of values of arc length.
+
+    Returns
+    -------
+    float or np.array
+        Value or vector of values of t at L.
+    '''
     A = np.exp(lambda_ * L) * np.sinh(lambda_ * u0[1])
-    return 1 / lambda_ * np.log(np.tanh(np.log(A + np.sqrt(A**2 + 1)) / 2) / np.tanh(lambda_ * u0[1] / 2))
+    return 1 / lambda_ * np.log(
+        np.tanh(np.log(A) + np.log(1 + np.sqrt(A**(-2) + 1)) / 2) / np.tanh(
+        lambda_ * u0[1] / 2))
 
 
-print('Построение адаптивной сетки\n')
+def richardson(u1, u2, H, p):
+    # H must be array of steps from previous grid.
+    u2 = u2[::2]
+    min_size = min(u1.size, u2.size)
+    u1 = u1[:min_size]
+    u2 = u2[:min_size]
+    H = H[:min_size]
+    
+    R = (u1 - u2) / (2**p - 1)
+    R = np.sqrt((R**2 * H).sum() / H.sum())
+    return R
 
 
-def run_iterations(L, L_mas, L_mas_old, H, U, integral, old_integral, Nmin, Nmax, solver):
+def run_iterations(case):
+    # Retrieve settings.
+    lambda_ = case.lambda_
+    u0 = case.u0
     u = u0
-    F_n1 = F(u)
+    Nmin = case.Nmin[-1]
+    Nmax = case.Nmax[-1]
+    if case.lengths == []:
+        L_old = case.length_0
+    else:
+        L_old = case.lengths[-1][-1]
+    if case.integrals == []:
+        int_old = case.integral_0
+    else:
+        int_old = case.integrals[-1]
+    p = case.approx_order_1
 
-    # с потолка
-    kappa = 1
-    kappas = [kappa]
-
-    U.append([])
-    U[-1].append(u)
-
-    DL = 0
-
+    # Temps.
+    U = [u]
+    F_last = F(u, lambda_)
+    kappa = 1.  # on the first step.
+    kappas = []
+    H = []  # steps
+    L = [0]
+    
     while True:
 
-        try:
-            h = (Nmin / L_mas_old[-1] + Nmax * kappa ** (2 / 5) * old_integral ** (-1)) ** (-1)
-            # print('h =', h)
-        except ZeroDivisionError as e:
-            print(e)
-            return L, L_mas, H, U, integral, DL, kappas
-
-        F_n = F_n1
-        u_new = solver['scheme'](u, h, F_n)
-
-        #        if u_new[0] > T:
-        #
-        #            u_new[1] = u[1] + F_n[1] * (T - u[0])
-        #            u_new[0] = T
-        #            h = ((T - u[0])**2 + (u_new[1] - u[1])**2) ** 0.5
-        #
-        #            L += h
-        #            L_mas.append(L)
-        #            H.append(h)
-        #
-        #            #L2
-        #            DL += (u_new[1] - UL(L)) ** 2 * h
-        #            D += (u_new[1] - UL(L)) ** 2
-        #            #DT += (u_new[1] - UT(u_new[0])) ** 2 * h
-        #
-        #            U[-1].append(u_new)
-        #            integral += kappa ** (2/5) * h
-        #            break
-
-        L += h
-
+        # try:
+        # Extrapolate kappa from previous step.
+        h = (Nmin / L_old + Nmax * kappa**0.4 / int_old)**(-1)
         H.append(h)
-        L_mas.append(L)
-        U[-1].append(u_new)
+        L.append(L[-1] + h)
+            # print('h =', h)
+        # except ZeroDivisionError as e:
+        #     print(e)
+        #     return L, L_mas, H, U, integral, DL, kappas
 
-        # L2
-        try:
-            DL += ((u_new[1] - UL(L))**2 + (u_new[0] - TL(L))**2) / (UL(L)**2 + TL(L)**2) * h
-        except OverflowError as e:
-            print(e)
-            return L, L_mas, H, U, integral, DL, kappas
-        # DT += (u_new[1] - UT(u_new[0])) ** 2 * h
+        u_new = erk(u, h, F_last, lambda_, p)
+        U.append(u_new)
 
-        F_n1 = F(u_new)
-        kappa = norm((F_n1 - F_n) / h)
-        # print('kappa =', kappa)
+        F_new = F(u_new, lambda_)  # rhs on next step
+        kappa = norm((F_new - F_last) / h)  # real kappa on current step
         kappas.append(kappa)
+        F_last = F_new
 
-        #        w3 = F(u)
-        #        kappa = norm((2*w2 - 2*w3) / h)
-
-        integral += kappa**(2 / 5) * h
         u = u_new
-
-        if u_new[1] >= 1 / lambda_ * np.arcsinh((lambda_ + (lambda_ ** 2 - 4) ** 0.5) / 2):
+        
+        if u_new[1] >= 1 / lambda_ * np.arcsinh(
+                (lambda_ + (lambda_**2 - 4)**0.5) / 2):
             break
 
-    DL /= sum(H)
-    DL **= 0.5
+    H = np.array(H)
+    kappas = np.array(kappas)
+    U = np.array(U)
+    # Do not write the first node L = 0 because it does not matter for DL.
+    L = np.array(L)
 
-    print('L =', L, 'int =', integral)
-    return L, L_mas, H, U, integral, DL, kappas
+    integral = (kappa**0.4 * H).sum()
+    DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambda_, u0))**2 +
+                   (U[1:, 0] - TL(L[1:], lambda_, u0))**2) /
+                  (UL(L[1:], lambda_, u0)**2 + 
+                   TL(L[1:], lambda_, u0)**2) * H).sum() / H.sum())
+
+    case.solutions.append(U)
+    case.lengths.append(L)
+    case.steps.append(H)
+    case.integrals.append(integral)
+    case.errors.append(DL)
+    
+    case.Nmin.append(2 * Nmin)
+    case.Nmax.append(2 * Nmax)
+    
+    case.grid_sizes.append(H.size)
 
 
-def stage1(lambda_, solver, break_crit):
-    Nmin = 6
-    Nmax = 20
-    # настоящий интеграл (посчитаем его после первого прогона)
-    integral = 1
+def stage1(case):
 
-    U = []
-
-    # текущая длина дуги
-    L_mas = [1]
-    # массив шагов
-    H = []
-    # массив чисел шагов
-    N_mas = []
-    # массив интегралов
-    integral_mas = []
-
-    crit_mas = [break_crit * 10]
-    DL_mas = []
-    DT_mas = []
-    R_mas = []
-
-    print('\nlambda =', lambda_)
     counter = 0
-
-    # Эйлерим и удваиваем Nmax и Nmin, пока сетка не станет адаптивной
-    while crit_mas[-1] > break_crit:
+    dist = case.crit1 + 1
+    while dist > case.crit1:
+        '''Apply Euler scheme and double Nmin and Nmax
+        until the mesh becomes adaptive.'''
         counter += 1
         print('{0}-й прогон Эйлера'.format(counter))
 
-        L = 0
+        run_iterations(case)
 
-        L_mas_old = L_mas
-        L_mas = [0]
-        H_old = H
-        H = []
-
-        old_integral = integral
-        integral = 0
-
-        L, L_mas, H, U, integral, DL, kappas = run_iterations(L, L_mas, L_mas_old, H, U, integral, old_integral, Nmin,
-                                                              Nmax, solver)
-        Nmin *= 2
-        Nmax *= 2
+        print('N =', case.steps[-1].size)
 
         if counter >= 2:
-            crit_mas.append(0)
-            N = min(len(H_old), len(H) // 2)
+            dist = 0
+            H_old = case.steps[-2]
+            H = case.steps[-1]
+            N = min(len(H_old), len(H[::2]))
             for n in range(N):
                 ksi = (H[2 * n] + H[2 * n + 1]) / H_old[n]
-                crit_mas[-1] += (ksi ** 0.5 - ksi ** (-0.5)) ** 2 * H[2 * n]
-            crit_mas[-1] /= L
-            crit_mas[-1] **= 0.5
+                dist = dist + (ksi**0.5 - ksi**(-0.5))**2 * H[2 * n]
+            dist /= H.sum()
+            dist **= 0.5
 
-        print('N =', len(H))
-        N_mas.append(len(H))
-
-        integral_mas.append(integral)
-
-        if counter >= 2:
-            R_mas.append(richardson(U, H, solver['p']))
-
-        DL_mas.append(DL)
-
-    return U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas[1:], R_mas, kappas
+            case.rich_errors.append(richardson(
+                case.solutions[-2][:, 1],
+                case.solutions[-1][:, 1],
+                H_old,
+                case.approx_order_1))
 
 
-def stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver, H):
-
-    while np.log10(N_mas[-1]) < 4:
-
-        H_new = [0 for i in range(2 * len(H))]
-        
-        N = len(H)
+def stage2(case):
+    
+    if case.grid_sizes[-1] >= case.num2:
+        raise ValueError('Stage 1 ended with too many steps!')
+    
+    while case.grid_sizes[-1] < case.num2:
+        lambda_ = case.lambda_
+        u0 = case.u0
+        H = case.steps[-1]
+        N = H.size
+        H_new = np.zeros(2 * N)
         
         if N == 1:
             H_new[0] = H[0] / 2
             H_new[1] = H[0] / 2
         else:
-            H_new[0] = H[0] * H[0] ** 0.5 / (H[0] ** 0.5 + H[1] ** 0.5)
-            H_new[1] = H[0] * H[1] ** 0.5 / (H[0] ** 0.5 + H[1] ** 0.5)
-            H_new[-2] = H[-1] * H[-2] ** 0.5 / (H[-2] ** 0.5 + H[-1] ** 0.5)
-            H_new[-1] = H[-1] * H[-1] ** 0.5 / (H[-2] ** 0.5 + H[-1] ** 0.5)
-        
+            H_new[0] = H[0] * H[0]**0.5 / (H[0]**0.5 + H[1]**0.5)
+            H_new[1] = H[0] * H[1]**0.5 / (H[0]**0.5 + H[1]**0.5)
+            H_new[-2] = H[-1] * H[-2]**0.5 / (H[-2]**0.5 + H[-1]**0.5)
+            H_new[-1] = H[-1] * H[-1]**0.5 / (H[-2]**0.5 + H[-1]**0.5)
+
             if N > 2:        
                 for i in range(1, N - 1):
-                    H_new[2 * i] = H[i] * H[i - 1] ** 0.25 / (H[i - 1] ** 0.25 + H[i + 1] ** 0.25)
-                    H_new[2 * i + 1] = H[i] * H[i + 1] ** 0.25 / (H[i - 1] ** 0.25 + H[i + 1] ** 0.25)
+                    H_new[2 * i] = H[i] * H[i - 1]**0.25 / \
+                        (H[i - 1]**0.25 + H[i + 1]**0.25)
+                    H_new[2 * i + 1] = H[i] * H[i + 1]**0.25 / \
+                        (H[i - 1]**0.25 + H[i + 1]**0.25)
 
+        H_old = H
         H = H_new
 
-        U.append([u0])
-        DL_mas.append(0)
-        u = u0
-        L = 0
+        u = case.u0
+        U = [u]
+        L = [0]
         for h in H:
-            L = L + h
-            u = solver['scheme'](u, h, F(u))
-            U[-1].append(u)
-            DL_mas[-1] = DL_mas[-1] + ((u[1] - UL(L))**2 + (u[0] - TL(L))**2) / (UL(L)**2 + TL(L)**2) * h
-        DL_mas[-1] /= sum(H)
-        DL_mas[-1] **= 0.5
-        N_mas.append(len(H))
+            L.append(L[-1] + h)
+            u = erk(u, h, F(u), lambda_, case.approx_order_2)
+            U.append(u)
+            
+        L = np.array(L)
+        U = np.array(U)
+        DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambda_, u0))**2 +
+                       (U[1:, 0] - TL(L[1:], lambda_, u0))**2) /
+                      (UL(L[1:], lambda_, u0)**2 + 
+                       TL(L[1:], lambda_, u0)**2) * H).sum() / H.sum())
+            
+        case.grid_sizes.append(H.size)
+        case.solutions.append(U)
+        case.lengths.append(L)
+        case.steps.append(H)
+        case.errors.append(DL)
+        if len(case.grid_sizes) > 1:
+            case.rich_errors.append(richardson(
+                case.solutions[-2][:, 1],
+                case.solutions[-1][:, 1],
+                H_old,
+                case.approx_order_2))
 
-        R_mas.append(richardson(U, H, solver['p']))
 
-    return U, DL_mas, N_mas, R_mas
-
-
-def richardson(U, H, p):
-    R = [(U[-2][j][1] - U[-1][2 * j][1]) / (2 ** p - 1) for j in range(min(len(U[-2]), len(U[-1]) // 2))]
-    R = [R[i] ** 2 * H[2 * i] for i in range(len(R))]
-    R = (sum(R)) ** 0.5
-    return R
-
-
-Lambdas = [1e5]
-break_crit = 1e-1
-
-# lambda_ = Lambdas[-1]
-lambda_ = 100
-u0 = np.array([0, 0.001])
-T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
-T = T_pole - 0.01 * T_pole
-L_extr = 1 / lambda_ * np.log(1 / np.sinh(lambda_ * u0[1]))
-L_MAX = 2 * L_extr
-
-L_array = []
-
-data = {}
-
-solver_stage1 = {'scheme': erk4, 'p': 4}
-solver_stage2 = {'scheme': erk4, 'p': 4}
-
-errors = plt.figure()
-for lambda_ in Lambdas:
-    u0 = np.array([0, 1 / lambda_ * np.arcsinh((lambda_ - (lambda_ ** 2 - 4) ** 0.5) / 2)])
+def run(cases):
     
-    T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
-    print(T_pole)
-    U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas, R_mas, kappas = stage1(lambda_, solver_stage1,
-                                                                                        break_crit)
-    switch = len(N_mas) - 1
-    print('Переход с первого этапа на второй происходит на', switch + 1, 'сетке')
+    for case in cases:
+        
+        print('Расчет задачи с lambda =', case.lambda_)
+        print('Построение адаптивной сетки\n')
+        
+        stage1(case)
+        
+        case.switch = case.grid_sizes.size
+        msg = 'Переход с первого этапа на второй происходит на'
+        msg += case.switch
+        msg += 'сетке'
+        print(msg)
 
-    U, DL_mas, N_mas, R_mas = stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver_stage2, H)
-    L_array.append(L_mas[-1])
-    L_extr = 1 / lambda_ * np.log(1 / np.sinh(lambda_ * u0[1]))
-    data[lambda_] = {
-        'u0': u0,
-        'L_extr': L_extr,
-        'Solutions': U,
-        'L error': np.log10(DL_mas),
-        'T error': np.log10(DT_mas),
-        'Grids': np.log10(N_mas),
-        'L array': L_mas,
-        'switch': switch,
-        'crit2': np.log10(crit_mas),
-        'Richardson': np.log10(R_mas),
-        'Kappa': kappas}
-
-    line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
-    line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
-    fig = plt.figure()
-
-    # # crit
-    # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
-
-    line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
-    line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
-
-    err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
-    # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
-    # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
-
-    rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
-
-    plt.title('Lambda = ' + str(lambda_))
-    plt.xlabel('lg(N)')
-    plt.ylabel('lg(err)')
-    plt.legend(handles=[line1, line_p, err, rich])
-    plt.show()
-    fig.savefig('err' + str(lambda_) + '.png')
-
-    X = [U[-1][i][0] for i in range(len(U[-1]))]
-    Y = [U[-1][i][1] for i in range(len(U[-1]))]
-    fig1 = plt.figure()
-    plt.plot(X, Y)
-    plt.title('Lambda = ' + str(lambda_))
-    plt.xlabel('t')
-    plt.ylabel('u(t)')
-    plt.show()
-    fig1.savefig('graph' + str(lambda_) + '.png')
-
-# plt.figure()
-
-# line10, = plt.plot(data[10]['Grids'], data[10]['L error'], '-ob', linewidth=5, markersize=10, label='lambda = 10')
-# switch = data[10]['switch']
-# yswitch = data[10]['L error'][switch]
-# plt.vlines(data[10]['Grids'][switch], yswitch - .7, yswitch + .7, colors='b')
-
-# line100, = plt.plot(data[100]['Grids'], data[100]['L error'], '-og', linewidth=5, markersize=10, label='lambda = 100')
-# switch = data[100]['switch']
-# yswitch = data[100]['L error'][switch]
-# plt.vlines(data[100]['Grids'][switch], yswitch - .7, yswitch + .7, colors='g')
-
-# line1000, = plt.plot(data[1000]['Grids'], data[1000]['L error'], '-or', linewidth=5, markersize=10, label='lambda = 1000')
-# switch = data[1000]['switch']
-# yswitch = data[1000]['L error'][switch]
-# plt.vlines(data[1000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='r')
-
-# line10000, = plt.plot(data[10000]['Grids'], data[10000]['L error'], '-om', linewidth=5, markersize=10, label='lambda = 10000')
-# switch = data[10000]['switch']
-# yswitch = data[10000]['L error'][switch]
-# plt.vlines(data[10000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='m')
-
-# line100000, = plt.plot(data[100000]['Grids'], data[100000]['L error'], '-oc', linewidth=5, markersize=10, label='lambda = 100000')
-# switch = data[100000]['switch']
-# yswitch = data[100000]['L error'][switch]
-# plt.vlines(data[100000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='c')
-
-# plt.legend(handles=[line10, line100, line1000, line10000, line100000])
-# plt.xlabel('lg(N)')
-# plt.ylabel('lg(error)')
-# plt.title('Calculations with ERK2 -> ERK4')
-# plt.savefig('D:/Docs/MSU/NumericalMethods/Programs/GEAM/20092020/ERK1.png')
+        stage2(case)
+    
+    return cases
+                    
