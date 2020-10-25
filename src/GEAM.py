@@ -101,14 +101,14 @@ def UL(L):
 
 
 def UT(t):
-    return (1 / lambda_) * np.arcsin(np.exp(lambda_ * t) * np.sin(lambda_ * u0[1]))
-#    B = np.exp(lambda_*t) * np.tanh(lambda_ * u0[1] / 2)
-#    return 1/lambda_ * np.log((1 + B) / (1 - B))
+    # return (1 / lambda_) * np.arcsin(np.exp(lambda_ * t) * np.sin(lambda_ * u0[1]))
+    B = np.exp(lambda_*t) * np.tanh(lambda_ * u0[1] / 2)
+    return 1/lambda_ * np.log((1 + B) / (1 - B))
 
 
 def TL(L):
     A = np.exp(lambda_ * L) * np.sinh(lambda_ * u0[1])
-    return 1 / lambda_ * np.log(np.tanh(np.log(A + np.sqrt(A**2 + 1)) / 2) / np.tanh(lambda_ * u0[1] / 2))
+    return 1 / lambda_ * np.log(np.tanh((np.log(A) + np.log(1 + np.sqrt(1 + A**(-2)))) / 2) / np.tanh(lambda_ * u0[1] / 2))
 
 
 print('Построение адаптивной сетки\n')
@@ -305,11 +305,11 @@ def stage2(lambda_, u0, T, U, DL_mas, N_mas, R_mas, solver, H):
 def richardson(U, H, p):
     R = [(U[-2][j][1] - U[-1][2 * j][1]) / (2 ** p - 1) for j in range(min(len(U[-2]), len(U[-1]) // 2))]
     R = [R[i] ** 2 * H[2 * i] for i in range(len(R))]
-    R = (sum(R)) ** 0.5
+    R = (sum(R) / sum(H)) ** 0.5
     return R
 
 
-Lambdas = [1e5]
+Lambdas = [1e6]#0, 100, 1000, 10000, 1e5, 1e6, 1e7]
 break_crit = 1e-1
 
 # lambda_ = Lambdas[-1]
@@ -324,15 +324,13 @@ L_array = []
 
 data = {}
 
-solver_stage1 = {'scheme': erk4, 'p': 4}
+solver_stage1 = {'scheme': erk1, 'p': 1}
 solver_stage2 = {'scheme': erk4, 'p': 4}
 
-errors = plt.figure()
 for lambda_ in Lambdas:
     u0 = np.array([0, 1 / lambda_ * np.arcsinh((lambda_ - (lambda_ ** 2 - 4) ** 0.5) / 2)])
     
     T_pole = (-1 / lambda_) * np.log(np.sin(lambda_ * u0[1]))  # полюс производной
-    print(T_pole)
     U, H, DL_mas, DT_mas, N_mas, integral_mas, L_mas, crit_mas, R_mas, kappas = stage1(lambda_, solver_stage1,
                                                                                         break_crit)
     switch = len(N_mas) - 1
@@ -354,68 +352,92 @@ for lambda_ in Lambdas:
         'Richardson': np.log10(R_mas),
         'Kappa': kappas}
 
-    line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
-    line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
-    fig = plt.figure()
+    # line1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
+    # line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
+    # fig = plt.figure()
 
-    # # crit
-    # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
+    # # # crit
+    # # crit, = plt.plot(np.log10(N_mas[1:]), np.log10(crit_mas), 'ko-', label='crit')
 
-    line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
-    line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
+    # line1, = plt.plot(np.log10(N_mas), line1, 'co-', label='45 degree line')
+    # line_p, = plt.plot(np.log10(N_mas), line_p, 'co-', label='tg(alpha) = -p')
 
-    err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
-    # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
-    # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
+    # err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
+    # # plt.plot(np.log10(N_mas), np.log10(DT_mas), 'mo-')
+    # # plt.plot(np.log10(N_mas), np.log10(D_mas), 'go-')
 
-    rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
+    # rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
 
-    plt.title('Lambda = ' + str(lambda_))
-    plt.xlabel('lg(N)')
-    plt.ylabel('lg(err)')
-    plt.legend(handles=[line1, line_p, err, rich])
-    plt.show()
-    fig.savefig('err' + str(lambda_) + '.png')
+    # plt.title('Lambda = ' + str(lambda_))
+    # plt.xlabel('lg(N)')
+    # plt.ylabel('lg(err)')
+    # plt.legend(handles=[line1, line_p, err, rich])
+    # plt.show()
+    # fig.savefig('err' + str(lambda_) + '.png')
 
-    X = [U[-1][i][0] for i in range(len(U[-1]))]
-    Y = [U[-1][i][1] for i in range(len(U[-1]))]
-    fig1 = plt.figure()
-    plt.plot(X, Y)
-    plt.title('Lambda = ' + str(lambda_))
-    plt.xlabel('t')
-    plt.ylabel('u(t)')
-    plt.show()
-    fig1.savefig('graph' + str(lambda_) + '.png')
+    # X = [U[-1][i][0] for i in range(len(U[-1]))]
+    # Y = [U[-1][i][1] for i in range(len(U[-1]))]
+    # fig1 = plt.figure()
+    # plt.plot(X, Y)
+    # plt.title('Lambda = ' + str(lambda_))
+    # plt.xlabel('t')
+    # plt.ylabel('u(t)')
+    # plt.show()
+    # fig1.savefig('graph' + str(lambda_) + '.png')
 
-# plt.figure()
+plt.figure(figsize=(16, 9))
 
-# line10, = plt.plot(data[10]['Grids'], data[10]['L error'], '-ob', linewidth=5, markersize=10, label='lambda = 10')
+lw = 5
+ms = 8
+
+# line10, = plt.plot(data[10]['Grids'], data[10]['L error'], '-or', linewidth=lw, markersize=ms, label='lambda = 10')
 # switch = data[10]['switch']
 # yswitch = data[10]['L error'][switch]
 # plt.vlines(data[10]['Grids'][switch], yswitch - .7, yswitch + .7, colors='b')
 
-# line100, = plt.plot(data[100]['Grids'], data[100]['L error'], '-og', linewidth=5, markersize=10, label='lambda = 100')
+# line100, = plt.plot(data[100]['Grids'], data[100]['L error'], '-og', linewidth=lw, markersize=ms, label='lambda = 100')
 # switch = data[100]['switch']
 # yswitch = data[100]['L error'][switch]
 # plt.vlines(data[100]['Grids'][switch], yswitch - .7, yswitch + .7, colors='g')
 
-# line1000, = plt.plot(data[1000]['Grids'], data[1000]['L error'], '-or', linewidth=5, markersize=10, label='lambda = 1000')
+# line1000, = plt.plot(data[1000]['Grids'], data[1000]['L error'], '-or', linewidth=lw, markersize=ms, label='lambda = 1000')
 # switch = data[1000]['switch']
 # yswitch = data[1000]['L error'][switch]
 # plt.vlines(data[1000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='r')
 
-# line10000, = plt.plot(data[10000]['Grids'], data[10000]['L error'], '-om', linewidth=5, markersize=10, label='lambda = 10000')
+# line10000, = plt.plot(data[10000]['Grids'], data[10000]['L error'], '-om', linewidth=lw, markersize=ms, label='lambda = 10000')
 # switch = data[10000]['switch']
 # yswitch = data[10000]['L error'][switch]
 # plt.vlines(data[10000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='m')
 
-# line100000, = plt.plot(data[100000]['Grids'], data[100000]['L error'], '-oc', linewidth=5, markersize=10, label='lambda = 100000')
+# line100000, = plt.plot(data[100000]['Grids'], data[100000]['L error'], '-oc', linewidth=lw, markersize=ms, label='lambda = 100000')
 # switch = data[100000]['switch']
 # yswitch = data[100000]['L error'][switch]
 # plt.vlines(data[100000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='c')
 
-# plt.legend(handles=[line10, line100, line1000, line10000, line100000])
-# plt.xlabel('lg(N)')
-# plt.ylabel('lg(error)')
-# plt.title('Calculations with ERK2 -> ERK4')
-# plt.savefig('D:/Docs/MSU/NumericalMethods/Programs/GEAM/20092020/ERK1.png')
+line1000000, = plt.plot(data[1000000]['Grids'], data[1000000]['L error'], '-or', linewidth=lw, markersize=ms, label='lambda = 1000000')
+switch = data[1000000]['switch']
+yswitch = data[1000000]['L error'][switch]
+plt.vlines(data[1000000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='r')
+
+# line10000000, = plt.plot(data[10000000]['Grids'], data[10000000]['L error'], '-og', linewidth=lw, markersize=ms, label='lambda = 10000000')
+# switch = data[10000000]['switch']
+# yswitch = data[10000000]['L error'][switch]
+# plt.vlines(data[10000000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='g')
+
+# line100000000, = plt.plot(data[100000000]['Grids'], data[100000000]['L error'], '-oc', linewidth=lw, markersize=ms, label='lambda = 100000000')
+# switch = data[100000000]['switch']
+# yswitch = data[100000000]['L error'][switch]
+# plt.vlines(data[100000000]['Grids'][switch], yswitch - .7, yswitch + .7, colors='c')
+
+# line1e10, = plt.plot(data[1e10]['Grids'], data[1e10]['L error'], '-oc', linewidth=lw, markersize=ms, label='lambda = 1e10')
+# switch = data[1e10]['switch']
+# yswitch = data[1e10]['L error'][switch]
+# plt.vlines(data[1e10]['Grids'][switch], yswitch - .7, yswitch + .7, colors='c')
+
+# plt.legend(handles=[line10, line100, line1000, line10000, line100000, line1000000, line10000000, line100000000])
+plt.xlabel('lg(N)')
+plt.ylabel('lg(error)')
+plt.title('Calculations with ERK4 -> ERK4')
+plt.grid()
+# plt.savefig('D:/Docs/Git/GEAM/data/26.10.2020/ERK1.png')
