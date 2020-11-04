@@ -58,9 +58,9 @@ class SolverData:
             
     '''
     
-    def __init__(self, lambda_):
+    def __init__(self, lambda_=10):
         '''
-        Set solver settings before run.
+        Set solver settings before the run.
 
         Parameters
         ----------
@@ -79,7 +79,7 @@ class SolverData:
         self.length_0 = 1.
         self.integral_0 = 1.
         self.crit1 = 1e-1
-        self.num2 = 1e5
+        self.num2 = 1e4
         self.approx_order_1 = 1
         self.approx_order_2 = 1
         

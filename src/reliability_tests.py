@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Oct 23 01:19:55 2020
+Created on Sun Nov  1 22:28:27 2020
 
 @author: kuzne
 """
@@ -10,8 +10,17 @@ from GEAM import run
 import numpy as np
 # default solver params are set in SolverData.__init__
 
-case = SolverData(1000)
-run([case])
+case = SolverData(lambd=1000)
+
+cases = [case]
+run(cases)
+
+data = {}
+for case in cases:
+    data[case.lambd] = case.__dict__
+    
+for case in data.values():
+    
 
 # line_1 = np.array([-j for j in np.log10(N_mas)])  # for erk1 on stage1
 # line_p = np.array([-solver_stage2['p']*j for j in np.log10(N_mas)])  # for stage2
@@ -21,22 +30,22 @@ run([case])
 # err, = plt.plot(np.log10(N_mas), np.log10(DL_mas), 'yo-', label='err')
 # rich, = plt.plot(np.log10(N_mas[1:]), np.log10(R_mas), 'r^-', label='richardson')
 
-# plt.title('Lambda = ' + str(lambda_))
+# plt.title('Lambda = ' + str(lambd))
 # plt.xlabel('lg(N)')
 # plt.ylabel('lg(err)')
 # plt.legend(handles=[line1, line_p, err, rich])
 # plt.show()
-# fig.savefig('err' + str(lambda_) + '.png')
+# fig.savefig('err' + str(lambd) + '.png')
 
 # X = [U[-1][i][0] for i in range(len(U[-1]))]
 # Y = [U[-1][i][1] for i in range(len(U[-1]))]
 # fig1 = plt.figure()
 # plt.plot(X, Y)
-# plt.title('Lambda = ' + str(lambda_))
+# plt.title('Lambda = ' + str(lambd))
 # plt.xlabel('t')
 # plt.ylabel('u(t)')
 # plt.show()
-# fig1.savefig('graph' + str(lambda_) + '.png')        
+# fig1.savefig('graph' + str(lambd) + '.png')        
 
 # line10, = plt.plot(data[10]['Grids'], data[10]['L error'], '-ob', linewidth=5, markersize=10, label='lambda = 10')
 # switch = data[10]['switch']

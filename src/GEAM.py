@@ -9,53 +9,53 @@ import numpy as np
 import warnings
 
 
-def erk1(u, h, F_n, lambda_):
+def erk1(u, h, F_n, lambd):
     return u + h * F_n
 
 
-def erk2(u, h, F_n, lambda_):
+def erk2(u, h, F_n, lambd):
     a2 = 2 / 3
     b1, b2 = 1 / 4, 3 / 4
     w1 = F_n
-    w2 = F(u + h * a2 * w1, lambda_)
+    w2 = F(u + h * a2 * w1, lambd)
     return u + h * (b1 * w1 + b2 * w2)
 
 
-def erk3(u, h, F_n, lambda_):
+def erk3(u, h, F_n, lambd):
     b1, b2, b3 = 2 / 9, 3 / 9, 4 / 9
     a21, a32 = 1 / 2, 3 / 4
     w1 = F_n
-    w2 = F(u + h * a21 * w1, lambda_)
-    w3 = F(u + h * a32 * w2, lambda_)
+    w2 = F(u + h * a21 * w1, lambd)
+    w3 = F(u + h * a32 * w2, lambd)
     return u + h * (b1 * w1 + b2 * w2 + b3 * w3)
 
 
-def erk4(u, h, F_n, lambda_):
+def erk4(u, h, F_n, lambd):
     b1, b2, b3, b4 = 1 / 6, 1 / 3, 1 / 3, 1 / 6
     a21, a32, a43 = 1 / 2, 1 / 2, 1
     w1 = F_n
-    w2 = F(u + h * a21 * w1, lambda_)
-    w3 = F(u + h * a32 * w2, lambda_)
-    w4 = F(u + h * a43 * w3, lambda_)
+    w2 = F(u + h * a21 * w1, lambd)
+    w3 = F(u + h * a32 * w2, lambd)
+    w4 = F(u + h * a43 * w3, lambd)
     return u + h * (b1 * w1 + b2 * w2 + b3 * w3 + b4 * w4)
 
 
-def erk(u, h, F_n, lambda_, p):
+def erk(u, h, F_n, lambd, p):
     if p == 1:
-        return erk1(u, h, F_n, lambda_)
+        return erk1(u, h, F_n, lambd)
     elif p == 2:
-        return erk2(u, h, F_n, lambda_)
+        return erk2(u, h, F_n, lambd)
     elif p == 3:
-        return erk3(u, h, F_n, lambda_)
+        return erk3(u, h, F_n, lambd)
     elif p == 4:
-        return erk4(u, h, F_n, lambda_)
+        return erk4(u, h, F_n, lambd)
     else:
         raise ValueError('Invalid order of approximation p = {}!'.format(p))
 
 
 # def write_to_file(case):
 #     print('write to file')
-#     filename = str(lambda_) + '.txt'
+#     filename = str(lambd) + '.txt'
 #     with open(filename, "w") as file:
 #         print('{0} {1} {2} {3}'.format('N'.rjust(10), 'err'.rjust(10), 'crit'.rjust(10), 'rich'.rjust(10)), file=file)
 #         print('{0:10.4f} {1:10.4f}'.format(data['Grids'][0], data['L error'][0]), file=file)
@@ -77,25 +77,25 @@ def norm(vec: np.ndarray):
 
 
 # правая часть ОДУ
-def f(u, lambda_):
-    # return np.array([1., np.tan(lambda_ * u[1])])
-    return np.array([1., np.sinh(lambda_ * u[1])])
+def f(u, lambd):
+    # return np.array([1., np.tan(lambd * u[1])])
+    return np.array([1., np.sinh(lambd * u[1])])
 
 
 # правая часть после перехода к длине дуги
-def F(u, lambda_):
+def F(u, lambd):
     # f_n = f(u)
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
         try:
-            res = np.array([1 / np.cosh(lambda_ * u[1]),
-                            np.tanh(lambda_ * u[1])])
+            res = np.array([1 / np.cosh(lambd * u[1]),
+                            np.tanh(lambd * u[1])])
         except Warning:
             res = np.array([0., np.inf])
     return res
 
 
-def UL(L, lambda_, u0):
+def UL(L, lambd, u0):
     '''
     Exact solution u(l). Must support vectorizing.
 
@@ -109,11 +109,17 @@ def UL(L, lambda_, u0):
     float or np.array
         Value or vector of values of solution at L.
     '''
-    A = np.exp(lambda_ * L) * np.sinh(lambda_ * u0[1])
-    return 1 / lambda_ * (np.log(A) + np.log(1 + np.sqrt(1 + A**(-2))))
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            A = np.exp(lambd * L) * np.sinh(lambd * u0[1])
+        except Warning:
+            return np.inf
+    return 1 / lambd * \
+        (np.log(A) + np.log(1 + np.sqrt(1 + A**(-2))))
 
 
-def UT(T, lambda_, u0):
+def UT(T, lambd, u0):
     '''
     Exact solution u(t). Must support vectorizing.
 
@@ -127,15 +133,19 @@ def UT(T, lambda_, u0):
     float or np.array
         Value or vector of values of solution at t.
     '''
-    # return (1 / lambda_) * np.arcsin(np.exp(lambda_ * t) * \
-    #    np.sin(lambda_ * u0[1]))
-    B = np.exp(lambda_ * T) * np.tanh(lambda_ * u0[1] / 2)
-    return 1 / lambda_ * np.log((1 + B) / (1 - B))
+    B = np.exp(lambd * T) * np.tanh(lambd * u0[1] / 2)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            res = 1 / lambd * np.log((1 + B) / (1 - B))
+        except Warning:
+            res = np.inf
+    return res
 
 
-def TL(L, lambda_, u0):
+def TL(L, lambd, u0):
     '''
-    Exact solution t(l). Must support vectorizing.
+    Exact solution t(l). Supports vectorizing.
 
     Parameters
     ----------
@@ -147,28 +157,36 @@ def TL(L, lambda_, u0):
     float or np.array
         Value or vector of values of t at L.
     '''
-    A = np.exp(lambda_ * L) * np.sinh(lambda_ * u0[1])
-    return 1 / lambda_ * np.log(
-        np.tanh(np.log(A) + np.log(1 + np.sqrt(A**(-2) + 1)) / 2) / np.tanh(
-        lambda_ * u0[1] / 2))
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            A = np.exp(lambd * L) * np.sinh(lambd * u0[1])
+            return 1 / lambd * np.log(
+                np.tanh(1 / 2 *
+                        (np.log(A) + np.log(1 + np.sqrt(A**(-2) + 1)))) /
+                np.tanh(lambd * u0[1] / 2))
+        except Warning:
+            return 1 / lambd * np.log(np.coth(lambd * u0[1]/ 2))
 
 
 def richardson(u1, u2, H, p):
     # H must be array of steps from previous grid.
     u2 = u2[::2]
-    min_size = min(u1.size, u2.size)
+    # Compare numbers of steps.
+    min_size = min(H.size, u2.size - 1)
     u1 = u1[:min_size]
     u2 = u2[:min_size]
-    H = H[:min_size]
-    
+    H = H[: min_size]
     R = (u1 - u2) / (2**p - 1)
+    
+    # Left rectangles norm.
     R = np.sqrt((R**2 * H).sum() / H.sum())
     return R
 
 
 def run_iterations(case):
     # Retrieve settings.
-    lambda_ = case.lambda_
+    lambd = case.lambd
     u0 = case.u0
     u = u0
     Nmin = case.Nmin[-1]
@@ -185,7 +203,7 @@ def run_iterations(case):
 
     # Temps.
     U = [u]
-    F_last = F(u, lambda_)
+    F_last = F(u, lambd)
     kappa = 1.  # on the first step.
     kappas = []
     H = []  # steps
@@ -203,18 +221,18 @@ def run_iterations(case):
         #     print(e)
         #     return L, L_mas, H, U, integral, DL, kappas
 
-        u_new = erk(u, h, F_last, lambda_, p)
+        u_new = erk(u, h, F_last, lambd, p)
         U.append(u_new)
 
-        F_new = F(u_new, lambda_)  # rhs on next step
+        F_new = F(u_new, lambd)  # rhs on next step
         kappa = norm((F_new - F_last) / h)  # real kappa on current step
         kappas.append(kappa)
         F_last = F_new
 
         u = u_new
         
-        if u_new[1] >= 1 / lambda_ * np.arcsinh(
-                (lambda_ + (lambda_**2 - 4)**0.5) / 2):
+        if u_new[1] >= 1 / lambd * np.arcsinh(
+                (lambd + (lambd**2 - 4)**0.5) / 2):
             break
 
     H = np.array(H)
@@ -224,10 +242,10 @@ def run_iterations(case):
     L = np.array(L)
 
     integral = (kappa**0.4 * H).sum()
-    DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambda_, u0))**2 +
-                   (U[1:, 0] - TL(L[1:], lambda_, u0))**2) /
-                  (UL(L[1:], lambda_, u0)**2 + 
-                   TL(L[1:], lambda_, u0)**2) * H).sum() / H.sum())
+    DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambd, u0))**2 +
+                   (U[1:, 0] - TL(L[1:], lambd, u0))**2) /
+                  (UL(L[1:], lambd, u0)**2 + 
+                   TL(L[1:], lambd, u0)**2) * H).sum() / H.sum())
 
     case.solutions.append(U)
     case.lengths.append(L)
@@ -242,18 +260,17 @@ def run_iterations(case):
 
 
 def stage1(case):
-
+    print('Stage 1')
     counter = 0
     dist = case.crit1 + 1
     while dist > case.crit1:
         '''Apply Euler scheme and double Nmin and Nmax
         until the mesh becomes adaptive.'''
         counter += 1
-        print('{0}-й прогон Эйлера'.format(counter))
 
         run_iterations(case)
 
-        print('N =', case.steps[-1].size)
+        print('N =', case.steps[-1].size, '\n')
 
         if counter >= 2:
             dist = 0
@@ -274,16 +291,18 @@ def stage1(case):
 
 
 def stage2(case):
-    
+    print('Stage 2')
     if case.grid_sizes[-1] >= case.num2:
         raise ValueError('Stage 1 ended with too many steps!')
     
     while case.grid_sizes[-1] < case.num2:
-        lambda_ = case.lambda_
+        lambd = case.lambd
         u0 = case.u0
         H = case.steps[-1]
         N = H.size
         H_new = np.zeros(2 * N)
+        
+        print('N =', 2 * N, '\n')
         
         if N == 1:
             H_new[0] = H[0] / 2
@@ -309,15 +328,15 @@ def stage2(case):
         L = [0]
         for h in H:
             L.append(L[-1] + h)
-            u = erk(u, h, F(u), lambda_, case.approx_order_2)
+            u = erk(u, h, F(u, lambd), lambd, case.approx_order_2)
             U.append(u)
             
         L = np.array(L)
         U = np.array(U)
-        DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambda_, u0))**2 +
-                       (U[1:, 0] - TL(L[1:], lambda_, u0))**2) /
-                      (UL(L[1:], lambda_, u0)**2 + 
-                       TL(L[1:], lambda_, u0)**2) * H).sum() / H.sum())
+        DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambd, u0))**2 +
+                       (U[1:, 0] - TL(L[1:], lambd, u0))**2) /
+                      (UL(L[1:], lambd, u0)**2 + 
+                       TL(L[1:], lambd, u0)**2) * H).sum() / H.sum())
             
         case.grid_sizes.append(H.size)
         case.solutions.append(U)
@@ -336,15 +355,15 @@ def run(cases):
     
     for case in cases:
         
-        print('Расчет задачи с lambda =', case.lambda_)
+        print('Расчет задачи с lambda =', case.lambd)
         print('Построение адаптивной сетки\n')
         
         stage1(case)
         
-        case.switch = case.grid_sizes.size
-        msg = 'Переход с первого этапа на второй происходит на'
-        msg += case.switch
-        msg += 'сетке'
+        case.switch = len(case.grid_sizes)
+        msg = 'Переход с первого этапа на второй происходит на '
+        msg += str(case.switch)
+        msg += ' сетке'
         print(msg)
 
         stage2(case)
