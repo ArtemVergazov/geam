@@ -71,15 +71,15 @@ def scalar(x, y):
     return (x * y).sum()
 
 
-def norm(vec: np.ndarray):
-    # vec - np.ndarray
-    return (scalar(vec, vec))**0.5
-
-
 # правая часть ОДУ
 def f(u, lambd):
-    # return np.array([1., np.tan(lambd * u[1])])
-    return np.array([1., np.sinh(lambd * u[1])])
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            res = np.array([1., np.sinh(lambd * u[1])])
+        except Warning:
+            res = np.array([0., np.inf])
+    return res
 
 
 # правая часть после перехода к длине дуги
@@ -91,7 +91,7 @@ def F(u, lambd):
             res = np.array([1 / np.cosh(lambd * u[1]),
                             np.tanh(lambd * u[1])])
         except Warning:
-            res = np.array([0., np.inf])
+            res = np.array([0., 1.])
     return res
 
 
@@ -109,14 +109,9 @@ def UL(L, lambd, u0):
     float or np.array
         Value or vector of values of solution at L.
     '''
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
-        try:
-            A = np.exp(lambd * L) * np.sinh(lambd * u0[1])
-        except Warning:
-            return np.inf
-    return 1 / lambd * \
-        (np.log(A) + np.log(1 + np.sqrt(1 + A**(-2))))
+    A = np.exp(lambd * L) * np.sinh(lambd * u0[1])
+    return 1 / lambd * (np.log(A) +
+                        np.log(1 + np.sqrt(1 + A**(-2))))
 
 
 def UT(T, lambd, u0):
@@ -134,13 +129,7 @@ def UT(T, lambd, u0):
         Value or vector of values of solution at t.
     '''
     B = np.exp(lambd * T) * np.tanh(lambd * u0[1] / 2)
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
-        try:
-            res = 1 / lambd * np.log((1 + B) / (1 - B))
-        except Warning:
-            res = np.inf
-    return res
+    return 1 / lambd * np.log((1 + B) / (1 - B))
 
 
 def TL(L, lambd, u0):
@@ -157,25 +146,18 @@ def TL(L, lambd, u0):
     float or np.array
         Value or vector of values of t at L.
     '''
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
-        try:
-            A = np.exp(lambd * L) * np.sinh(lambd * u0[1])
-            return 1 / lambd * np.log(
-                np.tanh(1 / 2 *
-                        (np.log(A) + np.log(1 + np.sqrt(A**(-2) + 1)))) /
-                np.tanh(lambd * u0[1] / 2))
-        except Warning:
-            return 1 / lambd * np.log(np.coth(lambd * u0[1]/ 2))
+    A = np.exp(lambd * L) * np.sinh(lambd * u0[1])
+    return 1 / lambd * np.log(
+        np.tanh(1 / 2 * (np.log(A) + np.log(1 + np.sqrt(A**(-2) + 1)))) /
+        np.tanh(lambd * u0[1] / 2))
 
 
 def richardson(u1, u2, H, p):
     # H must be array of steps from previous grid.
-    u2 = u2[::2]
     # Compare numbers of steps.
-    min_size = min(H.size, u2.size - 1)
+    min_size = min(H.size, (u2.size - 1) // 2)
     u1 = u1[:min_size]
-    u2 = u2[:min_size]
+    u2 = u2[::2][:min_size]
     H = H[: min_size]
     R = (u1 - u2) / (2**p - 1)
     
@@ -225,7 +207,9 @@ def run_iterations(case):
         U.append(u_new)
 
         F_new = F(u_new, lambd)  # rhs on next step
-        kappa = norm((F_new - F_last) / h)  # real kappa on current step
+        
+        # real kappa on current step
+        kappa = np.linalg.norm(F_new - F_last) / h
         kappas.append(kappa)
         F_last = F_new
 
@@ -238,10 +222,9 @@ def run_iterations(case):
     H = np.array(H)
     kappas = np.array(kappas)
     U = np.array(U)
-    # Do not write the first node L = 0 because it does not matter for DL.
     L = np.array(L)
 
-    integral = (kappa**0.4 * H).sum()
+    integral = (kappas**0.4 * H).sum()
     DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambd, u0))**2 +
                    (U[1:, 0] - TL(L[1:], lambd, u0))**2) /
                   (UL(L[1:], lambd, u0)**2 + 
@@ -276,7 +259,7 @@ def stage1(case):
             dist = 0
             H_old = case.steps[-2]
             H = case.steps[-1]
-            N = min(len(H_old), len(H[::2]))
+            N = min(H_old.size, H.size // 2)
             for n in range(N):
                 ksi = (H[2 * n] + H[2 * n + 1]) / H_old[n]
                 dist = dist + (ksi**0.5 - ksi**(-0.5))**2 * H[2 * n]
@@ -351,22 +334,19 @@ def stage2(case):
                 case.approx_order_2))
 
 
-def run(cases):
+def run(case):
     
-    for case in cases:
-        
-        print('Расчет задачи с lambda =', case.lambd)
-        print('Построение адаптивной сетки\n')
-        
-        stage1(case)
-        
-        case.switch = len(case.grid_sizes)
-        msg = 'Переход с первого этапа на второй происходит на '
-        msg += str(case.switch)
-        msg += ' сетке'
-        print(msg)
+    print('Расчет задачи с lambda =', case.lambd)
+    print('Построение адаптивной сетки\n')
+    
+    stage1(case)
+    
+    # Index of the last grid of stage 1.
+    case.switch = len(case.grid_sizes) - 1
+    msg = 'Переход с первого этапа на второй происходит на '
+    msg += str(case.switch + 1)
+    msg += ' сетке'
+    print(msg)
 
-        stage2(case)
-    
-    return cases
-                    
+    stage2(case)
+                        

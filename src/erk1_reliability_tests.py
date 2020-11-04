@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Nov  1 22:26:27 2020
+Created on Sun Nov  1 22:28:27 2020
 
 @author: kuzne
 """
@@ -9,20 +9,23 @@ from solver_data import SolverData
 from GEAM import run
 import matplotlib.pyplot as plt
 from matplotlib.ticker import AutoMinorLocator
+import numpy as np
 
 # Default solver params are set in SolverData constructor.
 
-lambd = 1e4
+p = 1
+max_nu = 8
 data = {}
 
 fig, ax = plt.subplots()
-for p in [1, 2, 4]:
+for nu in range(1, max_nu + 1):
+    lambd = 10**nu
     case = SolverData(lambd=lambd)
     case.approx_order_1 = p
     case.approx_order_2 = p
     run(case)
     
-    text = 'ERK' + str(p)
+    text = str(nu)
     data[text] = case.__dict__
     
     grids, errors = case.log_data()
@@ -47,11 +50,18 @@ for p in [1, 2, 4]:
                   FontStyle='italic')
     
     # Ticks.
+    ax.xaxis.set_ticks(np.arange(1., 5.))
     ax.xaxis.set_minor_locator(AutoMinorLocator(n=2))
+    
+    ax.yaxis.set_ticks(np.arange(-4., 1.))
     ax.yaxis.set_minor_locator(AutoMinorLocator(n=2))
+    
     ax.tick_params(which='both', direction='in')
     ax.tick_params(which='major', length=6, pad=5, labelsize='large')
     ax.tick_params(which='minor', length=3)
     
     # Annotations.
-    ax.text(grids[-2], errors[-2] + 0.3, text, FontSize=14)
+    ax.text(4.2, errors[-1], text,
+            FontSize=8,
+            FontStyle='oblique',
+            VerticalAlignment='center')
