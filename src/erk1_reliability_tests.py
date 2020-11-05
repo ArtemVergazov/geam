@@ -50,10 +50,10 @@ for nu in range(1, max_nu + 1):
                   FontStyle='italic')
     
     # Ticks.
-    ax.xaxis.set_ticks(np.arange(1., 5.))
+    ax.set_xticks(np.arange(1., 5.))
     ax.xaxis.set_minor_locator(AutoMinorLocator(n=2))
     
-    ax.yaxis.set_ticks(np.arange(-4., 1.))
+    ax.set_yticks(np.arange(-4., 1.))
     ax.yaxis.set_minor_locator(AutoMinorLocator(n=2))
     
     ax.tick_params(which='both', direction='in')
