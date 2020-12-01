@@ -9,34 +9,51 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 lambd = 10
-maxu = np.pi / 2 / lambd
-u0 = maxu / 10
-assert u0 < maxu, maxu
-t_inf = -1 / lambd * np.log(np.sin(lambd * u0))
+umax = np.pi / 2 / lambd
+u0 = umax / 10
+tmax = -1 / lambd * np.log(np.sin(lambd * u0))
 
 # u(t)
-t = np.linspace(-0.25 * t_inf, t_inf, 150)
-u = lambda t: \
-    1 / lambd * np.arcsin(np.exp(lambd * t) * np.sin(lambd * u0))
+t = np.linspace(-0.2 * tmax, tmax, 500)
+u = lambda t: 1 / lambd * np.arcsin(np.exp(lambd * t) * np.sin(lambd * u0))
 
-ut = u(t)
-plt.plot(t, ut)
-plt.xlim([t[0], 1.1 * t_inf])
-plt.ylim([0, 1.2 * u(0.99 * t_inf)])
-plt.plot(t_inf, u(t_inf), 'o', MarkerSize=8)
+fig, ax = plt.subplots()
+for loc in ['bottom', 'left', 'top', 'right']:
+    ax.spines[loc].set_visible(False)
+for loc in ['bottom', 'left']:
+    ax.spines[loc].set_position('zero')
 
-# u(l) & t(l)
-L_max = -1 / lambd * np.log(np.tan(lambd * u0 / 2))
-L = np.linspace(-0.25 * L_max, L_max, 150)
-u = lambda L: \
-    1 / lambd * 2 * np.arctan(np.exp(lambd * L) * np.tan(lambd * u0 / 2))
-t = lambda L: \
-    1 / lambd * np.log(
-        np.sin(2 * np.arctan(np.exp(lambd * L) *
-                             np.tan(lambd * u0 / 2))) / np.sin(lambd * u0))
-plt.figure()
-plt.plot(L, u(L))
-plt.plot(L[L >= 0], t(L[L >= 0]))
-plt.plot(L_max, u(L_max), 'ok', MarkerSize=8)
-plt.plot(L_max, t(L_max), 'ok', MarkerSize=8)
-plt.vlines(L_max, 0, max(u(L_max), t(L_max)) * 1.2)
+ax.plot(t, u(t), '-k', LineWidth=1.5)
+ax.plot(0, u0, 'ok', MarkerFaceColor='w')
+ax.plot(tmax, umax, 'ok') 
+
+ax.set_xticks([0, tmax])
+ax.set_xticklabels(['0', r'$t_*$'])
+ax.set_yticks([u0, umax])
+ax.set_yticklabels([r'$u_0$', r'$u_*$'], va='bottom')
+ax.tick_params(length=0)
+
+ax.set_xlim(right=1.2 * tmax)
+ax.set_ylim(top=1.2 * umax, bottom=-.02 * umax)
+
+left, right = ax.get_xlim()
+bottom, top = ax.get_ylim()
+ax.arrow(left, 0, right - left, 0,
+         length_includes_head=True,
+         color='k',
+         width=.0001,
+         head_width=.004,
+         head_length=.004,
+         overhang=1)
+ax.arrow(0, 0, 0, top,
+         length_includes_head=True,
+         color='k',
+         width=.0001,
+         head_width=.004,
+         head_length=.004,
+         overhang=1)
+
+ax.vlines(tmax, 0, top, colors='k', LineWidth=.8)
+
+ax.set_xlabel(r'$t$', FontSize=14, position=(1, 0))
+ax.set_ylabel(r'$u$', FontSize=14, position=(3, .95), rotation='horizontal')

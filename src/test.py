@@ -13,11 +13,7 @@ import numpy as np
 
 # Default solver params are set in SolverData constructor.
 
-p = 2
-lambd = 10**7
-case = SolverData(lambd=lambd)
-case.approx_order_1 = p
-case.approx_order_2 = p
-run(case)
-data = {}
-data[lambd] = case.__dict__
+fig, ax = plt.subplots()
+ax.plot([1, 2, 3, 5, 8])
+ax.set_xticks([3])
+ax.set_xticklabels(['3'], FontSize=22)
