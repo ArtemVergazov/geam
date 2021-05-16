@@ -61,15 +61,15 @@ def F(u):
 
 def richardson(u1, u2, H, p):
     # H must be array of steps from previous grid.
-    # Compare numbers of steps.
-    min_size = min(H.size, (u2.size - 1) // 2)
+    
+    min_size = min(H.size, (len(u2) - 1) // 2)
     u1 = u1[:min_size]
     u2 = u2[::2][:min_size]
     H = H[:min_size]
     R = (u1 - u2) / (2**p - 1)
     
     # Left rectangles norm.
-    R = np.sqrt((R**2 * H).sum() / H.sum())
+    R = np.linalg.norm(np.sqrt((R.T**2 * H).sum(1) / H.sum()))
     return R
 
 
@@ -197,11 +197,11 @@ def stage1(case):
                 ksi = (H[2 * n] + H[2 * n + 1]) / H_old[n]
                 dist = dist + (ksi**0.5 - ksi**(-0.5))**2 * H[2 * n]
             dist /= H.sum()
-            dist **= 0.5
+            dist **= .5
 
             case.rich_errors.append(richardson(
-                case.solutions[-2][:, 1],
-                case.solutions[-1][:, 1],
+                case.solutions[-2],
+                case.solutions[-1],
                 H_old,
                 case.approx_order_1))
 
@@ -237,8 +237,8 @@ def stage2(case):
         case.steps.append(H)
         if len(case.grid_sizes) > 1:
             case.rich_errors.append(richardson(
-                case.solutions[-2][:, 1],
-                case.solutions[-1][:, 1],
+                case.solutions[-2],
+                case.solutions[-1],
                 H_old,
                 case.approx_order_2))
         
@@ -260,6 +260,6 @@ def run(t0, T, u0):
     case.plot_error()
     
     t = case.solutions[-1][:, 0]
-    u = case.solutions[-1][:, 1]
+    u = case.solutions[-1][:, 1:]
     return t, u
                         

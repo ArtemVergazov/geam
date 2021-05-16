@@ -65,15 +65,15 @@ class SolverData:
         T : float
             final value for t
         u0 : float
-            initial value for u
+            sequence object of initial values for u
         '''
-        self.u0 = np.array([t0, u0])
+        self.u0 = np.array([t0, *u0])
         self.T = T
         
         # Scalars known before the run. May be customized.
         self.length_0 = 1.
         self.integral_0 = 1.
-        self.crit1 = 1e-2
+        self.crit1 = 3e-2
         self.crit2 = 1e-4
         self.approx_order_1 = 1
         self.approx_order_2 = 4
