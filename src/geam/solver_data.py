@@ -83,7 +83,6 @@ class SolverData:
         self.solutions = []
         self.lengths = []
         self.steps = []
-        self.errors = []
         self.rich_errors = []
         self.integrals = []
         self.Nmin = [6]

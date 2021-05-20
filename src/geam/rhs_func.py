@@ -20,4 +20,4 @@ def rhs(u):
     Vector rhs(u)
 
     '''
-    return np.array([1., -10 * u[1], -u[0]])
+    return np.array([1., -10 * u[1]])

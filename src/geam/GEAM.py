@@ -226,10 +226,6 @@ def stage2(case):
             
         L = np.array(L)
         U = np.array(U)
-        # DL = np.sqrt((((U[1:, 1] - UL(L[1:], lambd, u0))**2 +
-        #                (U[1:, 0] - TL(L[1:], lambd, u0))**2) /
-        #               (UL(L[1:], lambd, u0)**2 + 
-        #                TL(L[1:], lambd, u0)**2) * H).sum() / H.sum())
             
         case.grid_sizes.append(H.size)
         case.solutions.append(U)
