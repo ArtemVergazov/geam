@@ -20,4 +20,5 @@ def rhs(u):
     Vector rhs(u)
 
     '''
-    return np.array([1., -10 * u[1]])
+    lambda_ = 1e6
+    return np.array([1., np.sinh(lambda_ * u[1])])
